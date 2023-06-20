@@ -10,8 +10,11 @@
     "type": "git",
     "url": "git+https://github.com/torontojohnlan/garage_monitor.git"
   },
+  "dependencies":{
+    "grage-lib": "sunny-lan/grage-lib#master"
+  },
   "keywords": [],
-  "author": "",
+  "author": "John Lan",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/torontojohnlan/garage_monitor/issues"
