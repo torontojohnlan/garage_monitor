@@ -1,7 +1,8 @@
 {
-  "name": "garage_monitor",
+  "name": "garage_monitor-john-version",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,8 +11,8 @@
     "type": "git",
     "url": "git+https://github.com/torontojohnlan/garage_monitor.git"
   },
-  "dependencies":{
-    "grage-lib": "sunny-lan/grage-lib#master"
+  "dependencies": {
+    "grage-lib": "file:../grage-lib"
   },
   "keywords": [],
   "author": "John Lan",
