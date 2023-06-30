@@ -5,14 +5,16 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/torontojohnlan/garage_monitor.git"
   },
   "dependencies": {
-    "grage-lib": "file:../grage-lib"
+    "grage-lib": "file:../grage-lib",
+    "nodemailer": "^6.9.3"
   },
   "keywords": [],
   "author": "John Lan",
@@ -20,5 +22,8 @@
   "bugs": {
     "url": "https://github.com/torontojohnlan/garage_monitor/issues"
   },
-  "homepage": "https://github.com/torontojohnlan/garage_monitor#readme"
+  "homepage": "https://github.com/torontojohnlan/garage_monitor#readme",
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.8"
+  }
 }
