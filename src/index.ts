@@ -3,8 +3,8 @@
 // import {deviceID} from "./device_id.json";
 
 
-import makeClient from 'grage-lib/client.js';
-import esp8266 from 'grage-lib/esp8266.js';
+import makeClient from 'grage-lib-jl/client.js';
+import esp8266 from 'grage-lib-jl/esp8266.js';
 
 import * as nodemailer from "nodemailer";
 import { MailOptions } from "nodemailer/lib/json-transport";
@@ -19,8 +19,6 @@ class Emailer {
 //       auth: {
 //         user: process.env.MAILUSER,
 //         pass: process.env.MAILPASSWORD,
-//         // user:'lanjohn@outlook.com',
-//         // pass:'hamqmmnjnpbqymex',
 //       },
 //     });
 //   }
@@ -33,8 +31,6 @@ class Emailer {
       auth: {
         user: user,
         pass: pass,
-        // user:'lanjohn@outlook.com',
-        // pass:'hamqmmnjnpbqymex',
       },
     });
     this.transporter.verify(function(error, success) {
@@ -63,7 +59,7 @@ class Emailer {
   }
 }
 
-const deviceID = "1C1ONGR"
+const deviceID = process.env.deviceID;
 console.log(deviceID)
 const host =  "grage.azurewebsites.net";
 const grage = makeClient(host, function onTerminate(reason) {
@@ -77,8 +73,6 @@ console.log(`lastAlertSentTime - 1 hr in ms: ${lastAlertSentTime}`);
 
 let user = process.env.MAILUSER as string;
 let pass = process.env.MAILPASSWORD as string;
-// let user = 'lanjohn@outlook.com';
-// let pass = 'hamqmmnjnpbqymex';
 
 let receipiant = 'johnlan@gmail.com';
 let subject = 'Grage door has been open too long';
