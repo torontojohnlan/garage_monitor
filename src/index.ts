@@ -59,7 +59,7 @@ class Emailer {
   }
 }
 
-const deviceID = process.env.deviceID;
+const deviceID = process.env.deviceID as string;
 console.log(deviceID)
 const host =  "grage.azurewebsites.net";
 const grage = makeClient(host, function onTerminate(reason) {
