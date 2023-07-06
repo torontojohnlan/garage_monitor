@@ -57,7 +57,17 @@ class Emailer {
       } as MailOptions;
     this.sendEmail(msg);
   }
-}
+};
+
+import * as http from 'http';
+let index = 'You\'ve reached John\'s garage monitor app. This indicates the monitor is running fine';
+
+http.createServer(function (req, res) {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end(index);
+}).listen(80,'localhost',() => {
+  console.log('Server is listening on 80');
+});
 
 const deviceID = process.env.deviceID as string;
 console.log(deviceID)
