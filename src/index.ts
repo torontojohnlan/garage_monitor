@@ -1,13 +1,25 @@
 // import makeClient from 'grage-lib/client'
 // import esp8266 from 'grage-lib/esp8266'
 // import {deviceID} from "./device_id.json";
-
-
+console.log("===============================");
+console.log("Current Time : " + ((new Date(Date.now())).toLocaleString()));
+console.log("===============================");
 import makeClient from 'grage-lib-jl/client.js';
+import {showDebugMsg} from 'grage-lib-jl/client.js';
 import esp8266 from 'grage-lib-jl/esp8266.js';
 
+//#region emailer
 import * as nodemailer from "nodemailer";
 import { MailOptions } from "nodemailer/lib/json-transport";
+
+//#region emailer
+
+let user = process.env.MAILUSER as string;
+let pass = process.env.MAILPASSWORD as string;
+
+let receipiant = 'johnlan@gmail.com';
+let subject = 'Grage door has been open too long';
+let text = "nothing important";
 
 class Emailer {
    readonly transporter: nodemailer.Transporter;
@@ -58,19 +70,36 @@ class Emailer {
     this.sendEmail(msg);
   }
 };
+//#endregion
 
-import * as http from 'http';
-let index = 'You\'ve reached John\'s garage monitor app. This indicates the monitor is running fine';
+//#region SMS message setup
+import { SmsClient } from '@azure/communication-sms';
+const smsCnctnStr = process.env['SMScs'] as string;
+const smsClient = new SmsClient(smsCnctnStr);
+const fromNumber = "+18332940667";
+const SMSReicipients = (process.env.SMSreceipients as string).split('|');
 
-http.createServer(function (req, res) {
-  res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.end(index);
-}).listen(80,'localhost',() => {
-  console.log('Server is listening on 80');
-});
+async function sendSMS(msg:string){
+  const sendResults = await smsClient.send({
+    from: fromNumber,
+    to: SMSReicipients,
+    message: msg
+  });
 
+  // Individual messages can encounter errors during sending.
+  // Use the "successful" property to verify the status.
+  for (const sendResult of sendResults) {
+    if (sendResult.successful) {
+      console.log("Success: ", sendResult);
+    } else {
+      console.error("Something went wrong when trying to send this message: ", sendResult);
+    }
+  }  
+}
+//sendSMS('testMsg')
+//#endregion
 const deviceID = process.env.deviceID as string;
-console.log(deviceID)
+//console.log(deviceID)
 const host =  "grage.azurewebsites.net";
 const grage = makeClient(host, function onTerminate(reason) {
     console.log('[Terminated]', reason) ;
@@ -79,14 +108,9 @@ const grage = makeClient(host, function onTerminate(reason) {
 const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 let lastCloseTimeReported = Date.now();
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
-console.log(`lastAlertSentTime - 1 hr in ms: ${lastAlertSentTime}`);
-
-let user = process.env.MAILUSER as string;
-let pass = process.env.MAILPASSWORD as string;
-
-let receipiant = 'johnlan@gmail.com';
-let subject = 'Grage door has been open too long';
-let text = "nothing important";
+let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
+let garageDetails:string = '';
+showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
 
 grage.onOpen(() => {
     console.log('connected to server1')
@@ -98,32 +122,37 @@ grage.onOpen(() => {
         console.log('received data from device:')
         const sense = data.pinReadings[sensorPin];
         if (sense === esp8266.LogicLevel.HIGH) {
-            let openTimeSpan =  (Date.now() - lastCloseTimeReported);
-            let alertTimeSpan = (Date.now() - lastAlertSentTime);
-            console.log(`alertTimeSpan in ms : ${alertTimeSpan}`);
+          let openTimeSpan =  (Date.now() - lastCloseTimeReported);
+          let alertTimeSpan = (Date.now() - lastAlertSentTime);
+          if(((Math.round((openTimeSpan/1000)/60)) % 5) == 0 ){
+            showDebugMsg(`alertTimeSpan in ms : ${alertTimeSpan}`);
+            garageDetails = `
+              last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
+              last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
+              open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
+              alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
+            `
+            showDebugMsg(garageDetails);
+          }
+          if( (openTimeSpan > grage.options.maxOpenTimeAllowed) && (alertTimeSpan > grage.options.alertEmailInterval)){
+              // alert("door has been open for too long")
+              console.log(`sending alert email`);
+              let htmlBody = `
+                  <h1>WARNING</h1>
+                  <p>Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}.</p>
+                  <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString()}.</p>
+              `;
+              
+              const emailer = new Emailer(user, pass);
+              emailer.sendEmailTo(receipiant,subject,text,htmlBody);
+              sendSMS(`
+                Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}. 
+                https://grage.azurewebsites.net/apps/garage-door/app.html to close
+                `);
 
-            console.log(`
-                last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
-                last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
-                open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
-                alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
-            `);
-
-            if( (openTimeSpan > grage.options.maxOpenTimeAllowed) && (alertTimeSpan > grage.options.alertEmailInterval)){
-                // alert("door has been open for too long")
-                console.log(`sending alert email`);
-                let htmlBody = `
-                    <h1>WARNING</h1>
-                    <p>Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}.</p>
-                    <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString()}.</p>
-                `;
-                
-                const emailer = new Emailer(user, pass);
-                emailer.sendEmailTo(receipiant,subject,text,htmlBody);
-
-                lastAlertSentTime = Date.now();
-                console.log('warning email send')
-            }
+              lastAlertSentTime = Date.now();
+              console.log('warning email send')
+          }
         } else {
             lastCloseTimeReported = Date.now();
             lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; 
@@ -158,3 +187,21 @@ function openCloseDoor() {
         grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.LOW));
     }, 100);
 }
+
+//#region set up web server
+import * as http from 'http';
+let pageContent = `You\'ve reached John\'s garage monitor app. This indicates the monitor is running fine
+  ${garageDetails}`;
+
+let httpServer = http.createServer(function (req, res) {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end(pageContent);
+})
+httpServer.setTimeout(230*1000,() => {
+  console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
+})
+httpServer.listen(80,() => {
+  console.log('Server is listening on 80');
+});
+//#endregion
+
