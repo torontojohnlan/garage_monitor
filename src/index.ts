@@ -91,13 +91,10 @@ import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.j
 import * as esp8266 from 'grage-lib-jl/esp8266.js';
 
 let lastCloseTimeReported = Date.now();
-let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
 let lastInfoSentTime = Date.now();
-let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
 let openTimeSpan = 0;
 let alertTimeSpan = 0;
 let garageDetails:string = '';
-showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
 //#endregion
 
 //#region garage door processing block
@@ -105,8 +102,11 @@ const deviceID = process.env.deviceID as string;
 //console.log(deviceID)
 const host:string =  "grage.azurewebsites.net";
 const grage = makeClient(host, (function onTerminate(reason){
-    console.log('[Terminated]', reason) ;
+  console.log('[Terminated]', reason) ;
 }) as TerminateListener);
+let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
+// let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
+// showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
 //esp constants
 const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 
