@@ -1,20 +1,9 @@
-// import makeClient from 'grage-lib/client'
-// import esp8266 from 'grage-lib/esp8266'
-// import {deviceID} from "./device_id.json";
-console.log("===============================");
-console.log("Current Time : " + ((new Date(Date.now())).toLocaleString()));
-console.log("===============================");
-import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.js';
-// import { TerminateListener } from 'grage-lib-jl/client.js';
-import * as esp8266 from 'grage-lib-jl/esp8266.js';
-
-//#region emailer
+//#region mailer
 import * as nodemailer from "nodemailer";
 import { MailOptions } from "nodemailer/lib/json-transport";
 
 let user = process.env.MAILUSER as string;
 let pass = process.env.MAILPASSWORD as string;
-
 let receipiant = 'johnlan@gmail.com';
 let subject = 'Grage door has been open too long';
 let text = "nothing important";
@@ -96,14 +85,11 @@ async function sendSMS(msg:string){
 }
 //sendSMS('testMsg')
 //#endregion
-const deviceID = process.env.deviceID as string;
-//console.log(deviceID)
-const host:string =  "grage.azurewebsites.net";
-const grage = makeClient(host, (function onTerminate(reason){
-    console.log('[Terminated]', reason) ;
-}) as TerminateListener);
-//esp constants
-const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
+
+//#region garage door stats
+import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.js';
+import * as esp8266 from 'grage-lib-jl/esp8266.js';
+
 let lastCloseTimeReported = Date.now();
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
 let lastInfoSentTime = Date.now();
@@ -112,6 +98,17 @@ let openTimeSpan = 0;
 let alertTimeSpan = 0;
 let garageDetails:string = '';
 showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
+//#endregion
+
+//#region garage door processing block
+const deviceID = process.env.deviceID as string;
+//console.log(deviceID)
+const host:string =  "grage.azurewebsites.net";
+const grage = makeClient(host, (function onTerminate(reason){
+    console.log('[Terminated]', reason) ;
+}) as TerminateListener);
+//esp constants
+const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 
 grage.onOpen(() => {
     console.log('connected to server1')
@@ -121,6 +118,7 @@ grage.onOpen(() => {
     grage.connect(deviceID, function onDeviceData(data) {   // on grage connection, a data listener 'onDeviceData' is installed. This is better called "messageHandler"
         //console.trace()
         console.log('received data from device:');
+        alertTimeSpan = (Date.now() - lastAlertSentTime);
         garageDetails = `
           last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
           last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
@@ -131,7 +129,6 @@ grage.onOpen(() => {
         const sense = data.pinReadings[sensorPin];
         if (sense === esp8266.LogicLevel.HIGH) { // door open
           openTimeSpan =  (Date.now() - lastCloseTimeReported);
-          alertTimeSpan = (Date.now() - lastAlertSentTime);
           if(((Math.round((openTimeSpan/1000)/60)) % 5) == 0 ){
             showDebugMsg(garageDetails);
           }
@@ -197,12 +194,14 @@ grage.onOpen(() => {
 
 // call this function to open/close door
 function openCloseDoor() {
-    //send 100ms pulse to garage door switch
-    grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.HIGH));
-    setTimeout(() => {
-        grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.LOW));
-    }, 100);
+  //send 100ms pulse to garage door switch
+  grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.HIGH));
+  setTimeout(() => {
+      grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.LOW));
+  }, 100);
 }
+
+//#endregion
 
 //#region set up web server
 import * as http from 'http';
@@ -217,9 +216,9 @@ let httpServer = http.createServer(function (req, res) {
   res.end();
 })
 
-httpServer.setTimeout(230*1000,() => {
-  console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
-})
+// httpServer.setTimeout(230*1000,() => {
+//   console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
+// })
 httpServer.listen(80,() => {
   console.log('Server is listening on 80');
 });
