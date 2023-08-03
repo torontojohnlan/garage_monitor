@@ -50,7 +50,7 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'garageMonitor'
+          app-name: 'garage-Monitor'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_938E831B554C4A40BBBA59CD4E8FEE8C }}
           package: .
