@@ -4,15 +4,13 @@
 console.log("===============================");
 console.log("Current Time : " + ((new Date(Date.now())).toLocaleString()));
 console.log("===============================");
-import makeClient from 'grage-lib-jl/client.js';
-import {showDebugMsg} from 'grage-lib-jl/client.js';
-import esp8266 from 'grage-lib-jl/esp8266.js';
+import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.js';
+// import { TerminateListener } from 'grage-lib-jl/client.js';
+import * as esp8266 from 'grage-lib-jl/esp8266.js';
 
 //#region emailer
 import * as nodemailer from "nodemailer";
 import { MailOptions } from "nodemailer/lib/json-transport";
-
-//#region emailer
 
 let user = process.env.MAILUSER as string;
 let pass = process.env.MAILPASSWORD as string;
@@ -100,15 +98,18 @@ async function sendSMS(msg:string){
 //#endregion
 const deviceID = process.env.deviceID as string;
 //console.log(deviceID)
-const host =  "grage.azurewebsites.net";
-const grage = makeClient(host, function onTerminate(reason) {
+const host:string =  "grage.azurewebsites.net";
+const grage = makeClient(host, (function onTerminate(reason){
     console.log('[Terminated]', reason) ;
-});
+}) as TerminateListener);
 //esp constants
 const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 let lastCloseTimeReported = Date.now();
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
+let lastInfoSentTime = Date.now();
 let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
+let openTimeSpan = 0;
+let alertTimeSpan = 0;
 let garageDetails:string = '';
 showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
 
@@ -119,19 +120,19 @@ grage.onOpen(() => {
     // Begin receiving data from device
     grage.connect(deviceID, function onDeviceData(data) {   // on grage connection, a data listener 'onDeviceData' is installed. This is better called "messageHandler"
         //console.trace()
-        console.log('received data from device:')
+        console.log('received data from device:');
+        garageDetails = `
+          last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
+          last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
+          open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
+          alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
+        `
+        showDebugMsg(garageDetails);
         const sense = data.pinReadings[sensorPin];
-        if (sense === esp8266.LogicLevel.HIGH) {
-          let openTimeSpan =  (Date.now() - lastCloseTimeReported);
-          let alertTimeSpan = (Date.now() - lastAlertSentTime);
+        if (sense === esp8266.LogicLevel.HIGH) { // door open
+          openTimeSpan =  (Date.now() - lastCloseTimeReported);
+          alertTimeSpan = (Date.now() - lastAlertSentTime);
           if(((Math.round((openTimeSpan/1000)/60)) % 5) == 0 ){
-            showDebugMsg(`alertTimeSpan in ms : ${alertTimeSpan}`);
-            garageDetails = `
-              last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
-              last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
-              open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
-              alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
-            `
             showDebugMsg(garageDetails);
           }
           if( (openTimeSpan > grage.options.maxOpenTimeAllowed) && (alertTimeSpan > grage.options.alertEmailInterval)){
@@ -145,19 +146,34 @@ grage.onOpen(() => {
               
               const emailer = new Emailer(user, pass);
               emailer.sendEmailTo(receipiant,subject,text,htmlBody);
+              emailer.transporter.close();
               sendSMS(`
                 Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}. 
                 https://grage.azurewebsites.net/apps/garage-door/app.html to close
                 `);
 
               lastAlertSentTime = Date.now();
+              lastInfoSentTime = Date.now();
               console.log('warning email send')
           }
-        } else {
-            lastCloseTimeReported = Date.now();
-            lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; 
-            console.log('door is closed');
-        }
+        };
+        if (sense === esp8266.LogicLevel.LOW) { //door close
+          openTimeSpan = 0;
+          if ((Date.now() - lastInfoSentTime) > 24 * 60 * 60 * 1000){  //send an informational email anyway if no alert was sent for 1 day just to indicate that this app is running
+            console.log(`sending informational email`);
+            let htmlBody = `
+                <h1>INFO</h1>
+                <p>This is just an informational email to inform you that garage monitor app is running properly.</p>
+                <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString()}.</p>
+            `;
+            const emailer = new Emailer(user, pass);
+            emailer.sendEmailTo(receipiant,subject,text,htmlBody);
+            emailer.transporter.close();
+            lastInfoSentTime = Date.now();
+          }
+          lastCloseTimeReported = Date.now();
+          console.log('door is closed');
+        } 
     });
 
     //when device becomes alive, run initialization stuff
@@ -190,13 +206,17 @@ function openCloseDoor() {
 
 //#region set up web server
 import * as http from 'http';
-let pageContent = `You\'ve reached John\'s garage monitor app. This indicates the monitor is running fine
-  ${garageDetails}`;
 
 let httpServer = http.createServer(function (req, res) {
   res.writeHead(200, {'Content-Type': 'text/plain'});
-  res.end(pageContent);
+  let pageContent = `You\'ve reached John\'s garage monitor app. This indicates the monitor is running fine
+  ${garageDetails}`;
+  showDebugMsg("received web request, garageDetails is:");
+  showDebugMsg(garageDetails);
+  res.write(pageContent);
+  res.end();
 })
+
 httpServer.setTimeout(230*1000,() => {
   console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
 })

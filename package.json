@@ -2,11 +2,10 @@
   "name": "garage_monitor-john-version",
   "version": "1.1.0",
   "description": "",
-  "type": "module",
+  "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "set deviceID=1C1ONGR&& set MAILUSER=lanjohn@outlook.com&& set MAILPASSWORD=hamqmmnjnpbqymex&& set SMSreceipients=+16478251429&& set SMScs=endpoint=https://sms4grage.communication.azure.com/;accesskey=Y3bCYH3Lt5wZgJg3oGV2HllBHbb/eW0vwnbU2nvZGxWu1NbdQm32i+VUqPDBBX76LD2GW1D4OeZoIr8Z8SQFZw==&& node.exe ./dist/index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -14,7 +13,7 @@
   },
   "dependencies": {
     "@azure/communication-sms": "^1.0.0",
-    "grage-lib-jl": "^1.2.0",
+    "grage-lib-jl": "file:../grage-lib",
     "http": "^0.0.1-security",
     "nodemailer": "^6.9.3"
   },

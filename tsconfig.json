@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "ESNext",
+    "module": "CommonJS",
     "target": "es2017",
     "sourceMap": true,
     "inlineSources": true,
@@ -11,8 +11,6 @@
     "moduleResolution": "node",
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
     "outDir": "dist"
   }
 }
