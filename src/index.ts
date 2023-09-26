@@ -86,6 +86,8 @@ async function sendSMS(msg:string){
 //sendSMS('testMsg')
 //#endregion
 
+sendSMS("test from my toll free number")
+
 //#region garage door stats
 import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.js';
 import * as esp8266 from 'grage-lib-jl/esp8266.js';
@@ -105,13 +107,15 @@ const grage = makeClient(host, (function onTerminate(reason){
   console.log('[Terminated]', reason) ;
 }) as TerminateListener);
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
-// let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
+let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
 // showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
+// garageDetails = `lastAlertSentTime: ${strLastAlertSentTime}`;
+
 //esp constants
 const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 
 grage.onOpen(() => {
-    console.log('connected to server1')
+    console.log('grage.onOpen being called')
 
  
     // Begin receiving data from device
