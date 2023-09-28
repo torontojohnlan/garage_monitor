@@ -4,6 +4,8 @@
     "target": "es2017",
     "sourceMap": true,
     "inlineSources": true,
+    "rootDir": "./src",
+    "outDir": ".",
     "lib": [
       "es2017",
       "dom"
@@ -11,5 +13,11 @@
     "moduleResolution": "node",
     "noImplicitAny": true,
     "strictNullChecks": true,
-  }
+  },
+  "include": [
+    "."
+  ],
+  "exclude": [
+    "./.vscode"
+  ]
 }

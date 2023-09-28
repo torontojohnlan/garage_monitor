@@ -5,3 +5,7 @@ package-lock.json
 src/testSMS.js.map
 src/testSMS.js
 src/index.js.map
+testSMS.js.map
+testSMS.js
+index.js.map
+src/testSMS.ts
