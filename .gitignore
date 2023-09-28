@@ -2,6 +2,6 @@ node_modules/
 .vscode
 package-lock.json
 .env
-src/testSMS.ts
-dist/testSMS.*
-dist/index.js.map
+src/testSMS.js.map
+src/testSMS.js
+src/index.js.map

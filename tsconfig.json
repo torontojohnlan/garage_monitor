@@ -11,6 +11,5 @@
     "moduleResolution": "node",
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "outDir": "dist"
   }
 }
