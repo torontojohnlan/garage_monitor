@@ -9,3 +9,4 @@ testSMS.js.map
 testSMS.js
 index.js.map
 src/testSMS.ts
+src/httpClient.ts

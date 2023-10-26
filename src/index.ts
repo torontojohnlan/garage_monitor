@@ -86,7 +86,7 @@ async function sendSMS(msg:string){
 //sendSMS('testMsg')
 //#endregion
 
-sendSMS("test from my toll free number")
+//sendSMS("test from my toll free number")
 
 //#region garage door stats
 import {TerminateListener, showDebugMsg, makeClient} from 'grage-lib-jl/client.js';
@@ -104,10 +104,11 @@ const deviceID = process.env.deviceID as string;
 //console.log(deviceID)
 const host:string =  "grage.azurewebsites.net";
 const grage = makeClient(host, (function onTerminate(reason){
+	sendSMS("connection to garage controller terminated");
   console.log('[Terminated]', reason) ;
 }) as TerminateListener);
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
-let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString();
+let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString("en-US", {timeZone: "America/Toronto"});
 // showDebugMsg(`lastAlertSentTime: ${strLastAlertSentTime}`);
 // garageDetails = `lastAlertSentTime: ${strLastAlertSentTime}`;
 
@@ -124,8 +125,8 @@ grage.onOpen(() => {
         console.log('received data from device:');
         alertTimeSpan = (Date.now() - lastAlertSentTime);
         garageDetails = `
-          last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString()}
-          last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString()}
+          last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString("en-US", {timeZone: "America/Toronto"})}
+          last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString("en-US", {timeZone: "America/Toronto"})}
           open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
           alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
         `
@@ -141,15 +142,15 @@ grage.onOpen(() => {
               console.log(`sending alert email`);
               let htmlBody = `
                   <h1>WARNING</h1>
-                  <p>Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}.</p>
-                  <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString()}.</p>
+                  <p>Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString("en-US", {timeZone: "America/Toronto"})}.</p>
+                  <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString("en-US", {timeZone: "America/Toronto"})}.</p>
               `;
               
               const emailer = new Emailer(user, pass);
               emailer.sendEmailTo(receipiant,subject,text,htmlBody);
               emailer.transporter.close();
               sendSMS(`
-                Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString()}. 
+                Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString("en-US", {timeZone: "America/Toronto"})}. 
                 https://grage.azurewebsites.net/apps/garage-door/app.html to close
                 `);
 
@@ -165,7 +166,7 @@ grage.onOpen(() => {
             let htmlBody = `
                 <h1>INFO</h1>
                 <p>This is just an informational email to inform you that garage monitor app is running properly.</p>
-                <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString()}.</p>
+                <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString("en-US", {timeZone: "America/Toronto"})}.</p>
             `;
             const emailer = new Emailer(user, pass);
             emailer.sendEmailTo(receipiant,subject,text,htmlBody);
@@ -192,7 +193,8 @@ grage.onOpen(() => {
 
     //when device becomes dead, disable ui again
     grage.onDead(deviceID, function dead() {
-        console.log('device offline')
+		sendSMS("garage device offline");
+        console.log('device offline');
     });
 });
 
@@ -223,8 +225,9 @@ let httpServer = http.createServer(function (req, res) {
 // httpServer.setTimeout(230*1000,() => {
 //   console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
 // })
-httpServer.listen(3333,() => {
-  console.log('Server is listening on 80');
+let port = process.env.PORT || 3333;
+httpServer.listen(port,() => {
+  console.log(`Server is listening on ${port}`);
 });
 //#endregion
 

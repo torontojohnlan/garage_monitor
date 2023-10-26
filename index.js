@@ -201,7 +201,8 @@ let httpServer = http.createServer(function (req, res) {
 // httpServer.setTimeout(230*1000,() => {
 //   console.log("hit server timeout limit. The timeout value of 230s is aligned with same timeout limit on Azure load balancer")
 // })
-httpServer.listen(3333, () => {
+const port = process.env.PORT || 3333
+httpServer.listen(port, () => {
     console.log('Server is listening on 80');
 });
 //#endregion
