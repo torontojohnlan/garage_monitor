@@ -193,7 +193,7 @@ grage.onOpen(() => {
 
     //when device becomes dead, disable ui again
     grage.onDead(deviceID, function dead() {
-		sendSMS("garage device offline");
+		//sendSMS("garage device offline");
         console.log('device offline');
     });
 });
