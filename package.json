@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@azure/communication-sms": "^1.0.0",
-    "grage-lib-jl": "1.2.3",
+    "grage-lib-jl": "^1.2.4",
     "http": "^0.0.1-security",
     "nodemailer": "^6.9.3"
   },

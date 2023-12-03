@@ -5,8 +5,9 @@ const nodemailer = require("nodemailer");
 let user = process.env.MAILUSER;
 let pass = process.env.MAILPASSWORD;
 let receipiant = 'johnlan@gmail.com';
-let subject = 'Grage door has been open too long';
 let text = "nothing important";
+let scriptStartTime = Date.now();
+let deviceConnectionTimerout;
 class Emailer {
     //   constructor() {
     //     this.transporter = nodemailer.createTransport({
@@ -89,13 +90,19 @@ let lastInfoSentTime = Date.now();
 let openTimeSpan = 0;
 let alertTimeSpan = 0;
 let garageDetails = '';
+let devOfflineCount = 0;
 //#endregion
 //#region garage door processing block
 const deviceID = process.env.deviceID;
 //console.log(deviceID)
 const host = "grage.azurewebsites.net";
 const grage = (0, client_js_1.makeClient)(host, (function onTerminate(reason) {
-    sendSMS("connection to garage controller terminated");
+    //sendSMS("connection to server socket terminated");
+    // setTimeout(function() {  
+    //   console.log("respawn grage client");
+    //   const grage = makeClient(host,onTerminate);
+    // }, 1000);
+    console.trace();
     console.log('[Terminated]', reason);
 }));
 let lastAlertSentTime = Date.now() - grage.options.alertEmailInterval; //add one hour to last alert time so first alert can be sent immediately after first one hour open time
@@ -106,16 +113,28 @@ let strLastAlertSentTime = (new Date(lastAlertSentTime)).toLocaleString("en-US",
 const sensorPin = esp8266.Pin.D6, controlPin = esp8266.Pin.D7;
 grage.onOpen(() => {
     console.log('grage.onOpen being called');
-    // Begin receiving data from device
+    garageDetails = `
+            Connection to server OK.
+            Not yet connect to controller
+            `;
+    // after first open, send alert if device wasn't detected alive within certain time
+    // this timer is cleared in grage.onAlive
+    deviceConnectionTimerout = setInterval(function noDeviceErrorHandler() {
+        garageDetails = "Attempt to connect to device timed out";
+        sendSMS("Attempt to connect to device timed out. Check device status or restart server app");
+    }, 30 * 1000); //30 second
+    // connect to deviceID, and use onDeviceData to process data received
     grage.connect(deviceID, function onDeviceData(data) {
         //console.trace()
-        console.log('received data from device:');
         alertTimeSpan = (Date.now() - lastAlertSentTime);
         garageDetails = `
+          connected to controller/device
+
           last close time reported : ${(new Date(lastCloseTimeReported)).toLocaleString("en-US", { timeZone: "America/Toronto" })}
           last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString("en-US", { timeZone: "America/Toronto" })}
           open time span           : ${Math.round((openTimeSpan / 1000) / 60)} minutes
           alert time span          : ${Math.round((alertTimeSpan / 1000) / 60)} minutes
+          device discnnct cnt      : ${devOfflineCount}
         `;
         (0, client_js_1.showDebugMsg)(garageDetails);
         const sense = data.pinReadings[sensorPin];
@@ -133,6 +152,7 @@ grage.onOpen(() => {
                   <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString("en-US", { timeZone: "America/Toronto" })}.</p>
               `;
                 const emailer = new Emailer(user, pass);
+                let subject = 'Grage door has been open too long';
                 emailer.sendEmailTo(receipiant, subject, text, htmlBody);
                 emailer.transporter.close();
                 sendSMS(`
@@ -152,8 +172,9 @@ grage.onOpen(() => {
                 let htmlBody = `
                 <h1>INFO</h1>
                 <p>This is just an informational email to inform you that garage monitor app is running properly.</p>
-                <p>Last alert sent at ${(new Date(lastAlertSentTime)).toLocaleString("en-US", { timeZone: "America/Toronto" })}.</p>
+                <p>It has been running since ${(new Date(scriptStartTime)).toLocaleString("en-US", { timeZone: "America/Toronto" })}.</p>
             `;
+                let subject = 'INFO: garage monitor is running';
                 const emailer = new Emailer(user, pass);
                 emailer.sendEmailTo(receipiant, subject, text, htmlBody);
                 emailer.transporter.close();
@@ -167,6 +188,8 @@ grage.onOpen(() => {
     //such as setting up inputs, outputs and interrupts
     grage.onAlive(deviceID, function alive() {
         console.log('device is online');
+        clearInterval(deviceConnectionTimerout);
+        devOfflineCount = 0;
         //enable input then read
         grage.send(deviceID, esp8266.pinMode(sensorPin, esp8266.PinMode.INPUT_PULLUP));
         grage.send(deviceID, esp8266.attachInterrupt(sensorPin, esp8266.InterruptMode.CHANGE));
@@ -176,8 +199,15 @@ grage.onOpen(() => {
     });
     //when device becomes dead, disable ui again
     grage.onDead(deviceID, function dead() {
-        //sendSMS("garage device offline");
-        console.log('device offline');
+        devOfflineCount++;
+        garageDetails = `
+          connection to device dead
+          onDead Count: ${devOfflineCount}
+        `;
+        if ((devOfflineCount % 10) == 0) { //5 min
+            sendSMS("garage device offline");
+            console.log('device has been offline for past 10 check points');
+        }
     });
 });
 // call this function to open/close door
