@@ -198,7 +198,7 @@ grage.onOpen(() => {
         grage.send(deviceID, esp8266.digitalWrite(controlPin, esp8266.LogicLevel.LOW));
     });
     //when device becomes dead, disable ui again
-    grage.onDead(deviceID, function dead() {
+    grage.onDead(deviceID, function deadHandler() {
         devOfflineCount++;
         garageDetails = `
           connection to device dead
