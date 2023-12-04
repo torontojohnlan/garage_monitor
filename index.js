@@ -121,7 +121,8 @@ grage.onOpen(() => {
     // this timer is cleared in grage.onAlive
     deviceConnectionTimerout = setInterval(function noDeviceErrorHandler() {
         garageDetails = "Attempt to connect to device timed out";
-        sendSMS("Attempt to connect to device timed out. Check device status or restart server app");
+        //sending SMS text every 30s is too much, also deathHandler will send alert under same situation
+        //sendSMS("Attempt to connect to device timed out. Check device status or restart server app");
     }, 30 * 1000); //30 second
     // connect to deviceID, and use onDeviceData to process data received
     grage.connect(deviceID, function onDeviceData(data) {
@@ -205,7 +206,7 @@ grage.onOpen(() => {
           onDead Count: ${devOfflineCount}
         `;
         if ((devOfflineCount % 10) == 0) { //5 min
-            sendSMS("garage device offline");
+            sendSMS("garage device offline in the past 10 check points");
             console.log('device has been offline for past 10 check points');
         }
     });
