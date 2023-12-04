@@ -1,11 +1,10 @@
 {
   "name": "garage_monitor-john-version",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "",
   "type": "commonjs",
   "main": "index.js",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/torontojohnlan/garage_monitor.git"
