@@ -7,7 +7,7 @@ let pass = process.env.MAILPASSWORD as string;
 let receipiant = 'johnlan@gmail.com';
 let text = "nothing important";
 let scriptStartTime = Date.now();
-let deviceConnectionTimerout:NodeJS.Timeout;
+let channelConnetionTimeout:NodeJS.Timeout;
       
 class Emailer {
    readonly transporter: nodemailer.Transporter;
@@ -98,7 +98,7 @@ let lastInfoSentTime = Date.now();
 let openTimeSpan = 0;
 let alertTimeSpan = 0;
 let garageDetails:string = '';
-let devOfflineCount = 0;
+let chnlOfflineCnt = 0;
 //#endregion
 
 //#region garage door processing block
@@ -130,8 +130,8 @@ grage.onOpen(() => { //install onOpen handler
             `
       // after first open, send alert if device wasn't detected alive within certain time
       // this timer is cleared in grage.onAlive
-      deviceConnectionTimerout = setInterval(function noDeviceErrorHandler() {
-        garageDetails="Attempt to connect to device timed out";
+      channelConnetionTimeout = setInterval(function noDeviceErrorHandler() {
+        garageDetails="Attempt to connect to channel timed out";
         //sending SMS text every 30s is too much, also deathHandler will send alert under same situation
         //sendSMS("Attempt to connect to device timed out. Check device status or restart server app");
       }, 30*1000); //30 second
@@ -140,6 +140,7 @@ grage.onOpen(() => { //install onOpen handler
     grage.connect(deviceID, function onDeviceData(data) {   // on grage connection, a data listener 'onDeviceData' is installed. This is better called "messageHandler"
         //console.trace()
         alertTimeSpan = (Date.now() - lastAlertSentTime);
+        chnlOfflineCnt = 0;
         garageDetails = `
           connected to controller/device
 
@@ -147,7 +148,7 @@ grage.onOpen(() => { //install onOpen handler
           last alert sent on       : ${(new Date(lastAlertSentTime)).toLocaleString("en-US", {timeZone: "America/Toronto"})}
           open time span           : ${Math.round((openTimeSpan/1000)/60)} minutes
           alert time span          : ${Math.round((alertTimeSpan/1000)/60)} minutes
-          device discnnct cnt      : ${devOfflineCount}
+          channel discnnct cnt      : ${chnlOfflineCnt}
         `
         showDebugMsg(garageDetails);
         const sense = data.pinReadings[sensorPin];
@@ -203,8 +204,8 @@ grage.onOpen(() => { //install onOpen handler
     //such as setting up inputs, outputs and interrupts
     grage.onAlive(deviceID, function alive() {
       console.log('device is online')
-        clearInterval(deviceConnectionTimerout);
-        devOfflineCount = 0;
+        clearInterval(channelConnetionTimeout);
+        chnlOfflineCnt = 0;
         //enable input then read
         grage.send(deviceID, esp8266.pinMode(sensorPin, esp8266.PinMode.INPUT_PULLUP));
         grage.send(deviceID, esp8266.attachInterrupt(sensorPin, esp8266.InterruptMode.CHANGE));
@@ -216,13 +217,13 @@ grage.onOpen(() => { //install onOpen handler
 
     //when device becomes dead, disable ui again
     grage.onDead(deviceID, function deadHandler() {
-      devOfflineCount++;
+      chnlOfflineCnt++;
       garageDetails = `
           connection to device dead
-          onDead Count: ${devOfflineCount}
+          onDead Count: ${chnlOfflineCnt}
         `
 
-    if ((devOfflineCount % 10) == 0) { //5 min
+    if ((chnlOfflineCnt % 10) == 0) { //5 min
         sendSMS("garage device offline in the past 10 check points");
         console.log('device has been offline for past 10 check points');
       }
