@@ -61,6 +61,7 @@ class Emailer {
 //#endregion
 
 //#region SMS message setup
+/*
 import { SmsClient } from '@azure/communication-sms';
 const smsCnctnStr = process.env['SMScs'] as string;
 const smsClient = new SmsClient(smsCnctnStr);
@@ -85,6 +86,7 @@ async function sendSMS(msg:string){
   }  
 }
 //sendSMS('testMsg')
+*/
 //#endregion
 
 //sendSMS("test from my toll free number")
@@ -170,11 +172,11 @@ grage.onOpen(() => { //install onOpen handler
               let subject = 'Grage door has been open too long';
               emailer.sendEmailTo(receipiant,subject,text,htmlBody);
               emailer.transporter.close();
-              sendSMS(`
+              /*sendSMS(`
                 Your garage door has open since ${(new Date(lastCloseTimeReported)).toLocaleString("en-US", {timeZone: "America/Toronto"})}. 
                 https://grage.azurewebsites.net/apps/garage-door/app.html to close
                 `);
-
+              */
               lastAlertSentTime = Date.now();
               lastInfoSentTime = Date.now();
               console.log('warning email send')
@@ -224,7 +226,12 @@ grage.onOpen(() => { //install onOpen handler
         `
 
     if ((chnlOfflineCnt % 20) == 0) { //10 min
-        sendSMS("garage device offline in the past 10 check points");
+        //sendSMS("garage device offline in the past 10 check points");
+        let subject = 'garage device offline in the past 10 check points';
+        const emailer = new Emailer(user, pass);
+        emailer.sendEmailTo(receipiant,subject,text,"Critical");
+        emailer.transporter.close();
+    
         console.log('device has been offline for past 10 check points');
       }
     });
