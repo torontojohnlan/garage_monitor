@@ -223,7 +223,7 @@ grage.onOpen(() => { //install onOpen handler
           onDead Count: ${chnlOfflineCnt}
         `
 
-    if ((chnlOfflineCnt % 10) == 0) { //5 min
+    if ((chnlOfflineCnt % 20) == 0) { //10 min
         sendSMS("garage device offline in the past 10 check points");
         console.log('device has been offline for past 10 check points');
       }
